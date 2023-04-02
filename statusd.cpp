@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
+#include <sys/fcntl.h>
 #include "defer.h"
 #ifndef NO_X11
 #include <X11/Xlib.h>
@@ -21,18 +22,28 @@ enum FieldIndex : u8 {
     FI_TIME = 0,
     FI_LOAD,
     FI_TEMP,
+    FI_VOL,
+    FI_MIC,
+    FI_MEM,
+    FI_GOV,
+    FI_DATE,
     N_FIELDS,
 };
 
 /* Macros */
 #define SOCK_NAME "status-sock"
-#define STATUS_FMT "[%s |%s |%s]"
+#define STATUS_FMT "[%s |%s |%s |%s |%s |%s |%s |%s]"
 #define FIELD_BUF_MAX_SIZE (31 + 1)
 #define STATUS_BUF_MAX_SIZE (FIELD_BUF_MAX_SIZE * N_FIELDS + sizeof(STATUS_FMT) + 1)
 #define SHELL "/bin/sh"
-#define TIME_CMD R"(date +%H:%M:%S)"
-#define LOAD_CMD R"(uptime | grep -wo "average: .*," | cut --delimiter=' ' -f2 | head -c4)"
-#define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | cut -c2-5)"
+#define TIME_CMD R"(date +%T)"
+#define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
+#define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | sed 's/+//')"
+#define VOL_CMD R"(pactl list sinks | awk '$1=="Volume:" {print $5}')"
+#define CHECK_MUTED_VOL R"(pactl list sinks | awk '$1=="Mute:" {print $2}')"
+#define MIC_CMD R"(amixer sget Capture | tail -n1 | awk -F '\\[|\\]' '{print $4}')"
+#define MEM_CMD R"(free -h | awk '/^Mem:/ {print $3"/"$2}')"
+#define DATE_CMD R"(date "+%a %d.%m.%Y")"
 #define SHCMD(cmd)                                                                            \
     {                                                                                         \
         SHELL, "-c", cmd, nullptr                                                             \
@@ -50,10 +61,15 @@ static Window root;
 static void refresh_status();
 static int get_named_socket();
 static ssize_t read_all(int, char*, size_t);
-static bool read_cmd_output(const char*, char*);
+static bool read_cmd_output(const char*, char*, size_t);
 static void update_time();
 static void update_load();
 static void update_temp();
+static void update_volume();
+static void update_mic();
+static void update_mem();
+static void update_gov();
+static void update_date();
 static void init_status();
 #ifndef NO_X11
 static bool init_x();
@@ -61,9 +77,14 @@ static bool init_x();
 
 /* Updates */
 static constexpr void (*updates[])() = {
-    &update_time,
-    &update_load,
-    &update_temp,
+    &update_time,   /* 0 */
+    &update_load,   /* 1 */
+    &update_temp,   /* 2 */
+    &update_volume, /* 3 */
+    &update_mic,    /* 4 */
+    &update_mem,    /* 5 */
+    &update_gov,    /* 6 */
+    &update_date,   /* 7 */
 };
 
 /* Function definitions  */
@@ -76,7 +97,12 @@ refresh_status()
              STATUS_FMT,
              field_buffers[0],
              field_buffers[1],
-             field_buffers[2]);
+             field_buffers[2],
+             field_buffers[3],
+             field_buffers[4],
+             field_buffers[5],
+             field_buffers[6],
+             field_buffers[7]);
 
 #ifdef NO_X11
     puts(buf);
@@ -131,8 +157,13 @@ read_all(int fd, char* buf, size_t count)
 }
 
 bool
-read_cmd_output(const char* cmd, char* buf)
+read_cmd_output(const char* cmd, char* buf, size_t count)
 {
+    buf[0] = '\0'; /* Ignore previous contents */
+
+    if (count < 2)
+        return false;
+
     int pipe_fds[2];
     if (pipe(pipe_fds) < 0) {
         perror("pipe");
@@ -165,8 +196,7 @@ read_cmd_output(const char* cmd, char* buf)
     } else {
         close(pipe_fds[1]);
 
-        buf[0] = '\0'; /* Ignore previous contents */
-        auto nbytes = read_all(pipe_fds[0], buf, FIELD_BUF_MAX_SIZE - 1);
+        auto nbytes = read_all(pipe_fds[0], buf, count - 1);
         if (nbytes < 0) {
             perror("read");
             return false;
@@ -184,19 +214,90 @@ read_cmd_output(const char* cmd, char* buf)
 void
 update_time()
 {
-    read_cmd_output(TIME_CMD, field_buffers[FI_TIME]);
+    read_cmd_output(TIME_CMD, field_buffers[FI_TIME], FIELD_BUF_MAX_SIZE);
 }
 
 void
 update_load()
 {
-    read_cmd_output(LOAD_CMD, field_buffers[FI_LOAD]);
+    read_cmd_output(LOAD_CMD, field_buffers[FI_LOAD], FIELD_BUF_MAX_SIZE);
 }
 
 void
 update_temp()
 {
-    read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP]);
+    read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP], FIELD_BUF_MAX_SIZE);
+}
+
+void
+update_volume()
+{
+    if (!read_cmd_output(VOL_CMD, field_buffers[FI_VOL], FIELD_BUF_MAX_SIZE - 1))
+        return;
+
+    char muted_buf[2] = {};
+    if (read_cmd_output(CHECK_MUTED_VOL, muted_buf, sizeof(muted_buf)) && muted_buf[0] == 'y')
+        strcat(field_buffers[FI_VOL], "*");
+}
+
+void
+update_mic()
+{
+    read_cmd_output(MIC_CMD, field_buffers[FI_MIC], FIELD_BUF_MAX_SIZE);
+}
+
+void
+update_mem()
+{
+    read_cmd_output(MEM_CMD, field_buffers[FI_MEM], FIELD_BUF_MAX_SIZE);
+}
+
+void
+update_gov()
+{
+    static int fd = -1;
+
+    if (fd < 0)
+        fd = open("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        return;
+    }
+
+    char gov_buf[32] = {};
+    lseek(fd, 0, SEEK_SET);
+    auto nbytes = read(fd, gov_buf, sizeof(gov_buf) - 1);
+    if (nbytes < 0) {
+        perror("read");
+        return;
+    }
+
+    if (nbytes == 0) {
+        fprintf(stderr, "statusd: Governor file unexpectedly closed\n");
+        close(fd);
+        fd = -1;
+        return;
+    }
+
+    gov_buf[nbytes] = '\0';
+    if (nbytes > 0 && gov_buf[nbytes - 1] == '\n')
+        gov_buf[--nbytes] = '\0';
+
+    char* field_buf = field_buffers[FI_GOV];
+    if (strcmp(gov_buf, "performance") == 0)
+        strcpy(field_buf, "p");
+    else if (strcmp(gov_buf, "ondemand") == 0)
+        strcpy(field_buf, "d");
+    else if (strcmp(gov_buf, "powersave") == 0)
+        strcpy(field_buf, "s");
+    else
+        strcpy(field_buf, "unk");
+}
+
+void
+update_date()
+{
+    read_cmd_output(DATE_CMD, field_buffers[FI_DATE], FIELD_BUF_MAX_SIZE);
 }
 
 void
@@ -254,6 +355,10 @@ main()
             fprintf(stderr, "statusd: failed to read all bytes for bitset\n");
             continue;
         }
+
+#ifdef STATUS_DBG
+        fprintf(stderr, "statusd: Received bitset %lu\n", bitset);
+#endif
 
         for (u8 i = 0; i < std::size(updates); i++) {
             if (bitset & (u64(1) << i))
