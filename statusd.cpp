@@ -51,7 +51,7 @@ struct Update {
     union {
         const char* sh_cmd;
         void (*fptr)(char*);
-    } args;
+    };
 };
 
 /* Globals */
@@ -202,10 +202,10 @@ run_update(const Update* update)
 {
     switch (update->type) {
     case UT_SHELL:
-        read_cmd_output(update->args.sh_cmd, field_buffers[update->buffer_idx]);
+        read_cmd_output(update->sh_cmd, field_buffers[update->buffer_idx]);
         break;
     case UT_INTERNAL:
-        update->args.fptr(field_buffers[update->buffer_idx]);
+        update->fptr(field_buffers[update->buffer_idx]);
         break;
     }
 }
