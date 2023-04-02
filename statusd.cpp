@@ -25,7 +25,7 @@ enum FieldIndex : u8 {
 };
 
 /* Macros */
-#define SOCKET_PATH "\0/tmp/status.socket"
+#define SOCK_NAME "\0status-sock"
 #define STATUS_FMT "[%s |%s |%s]"
 #define FIELD_BUF_MAX_SIZE (31 + 1)
 #define STATUS_BUF_MAX_SIZE (FIELD_BUF_MAX_SIZE * N_FIELDS + sizeof(STATUS_FMT) + 1)
@@ -97,7 +97,7 @@ get_named_socket()
 
     sockaddr_un name{};
     name.sun_family = AF_UNIX;
-    strncpy(name.sun_path, SOCKET_PATH, sizeof(name.sun_path) - 1);
+    strncpy(name.sun_path, SOCK_NAME, sizeof(name.sun_path) - 1);
 
     if (bind(sock_fd, (const sockaddr*)&name, sizeof(name)) < 0) {
         perror("bind");

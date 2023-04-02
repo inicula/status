@@ -9,7 +9,7 @@
 using u8 = uint8_t;
 using u64 = uint64_t;
 
-#define SOCKET_PATH "\0/tmp/status.socket"
+#define SOCK_NAME "\0status-sock"
 
 int
 main(int argc, char* argv[])
@@ -44,7 +44,7 @@ main(int argc, char* argv[])
     sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+    strncpy(addr.sun_path, SOCK_NAME, sizeof(addr.sun_path) - 1);
 
     if (sendto(server_fd, &bs, sizeof(bs), 0, (const sockaddr*)&addr, sizeof(addr)) < 0) {
         perror("sendto");
