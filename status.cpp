@@ -32,7 +32,7 @@ main(int argc, char* argv[])
             return EXIT_FAILURE;
         }
 
-        bf |= 1 << pos;
+        bf |= u64(1) << pos;
     }
 
     int server_fd = socket(AF_UNIX, SOCK_DGRAM, 0);

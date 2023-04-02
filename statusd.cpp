@@ -267,9 +267,9 @@ main()
         }
 
         for (u8 i = 0; i < std::size(updates); i++) {
-            if (bitset & (1 << i))
+            if (bitset & (u64(1) << i))
                 run_update(&updates[i]);
-            bitset &= ~(1 << i);
+            bitset &= ~(u64(1) << i);
         }
 
         if (bitset)
