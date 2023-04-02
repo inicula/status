@@ -62,7 +62,7 @@ static int screen;
 static Window root;
 #endif
 
-/* Functions declarations */
+/* Function declarations */
 static void refresh_status();
 static int get_named_socket();
 static ssize_t read_all(int, char*, size_t);
@@ -73,7 +73,7 @@ static void init_status();
 static bool init_x();
 #endif
 
-/* Update configs */
+/* Updates' configuration */
 static constexpr Update updates[] = {
     /* Update the time field */
     {UT_SHELL, FI_TIME, {.sh_cmd = TIME_CMD}},
@@ -83,7 +83,7 @@ static constexpr Update updates[] = {
     {UT_SHELL, FI_TEMP, {.sh_cmd = TEMP_CMD}},
 };
 
-/* Functions definitions  */
+/* Function definitions  */
 void
 refresh_status()
 {
