@@ -19,7 +19,7 @@ main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    u64 bf = 0;
+    u64 bs = 0;
     for (int i = 1; i < argc; i++) {
         u8 pos;
         if (std::from_chars(argv[i], argv[i] + strlen(argv[i]), pos).ec != std::errc{}) {
@@ -32,7 +32,7 @@ main(int argc, char* argv[])
             return EXIT_FAILURE;
         }
 
-        bf |= u64(1) << pos;
+        bs |= u64(1) << pos;
     }
 
     int server_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -46,7 +46,7 @@ main(int argc, char* argv[])
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 
-    if (sendto(server_fd, &bf, sizeof(bf), 0, (const sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (sendto(server_fd, &bs, sizeof(bs), 0, (const sockaddr*)&addr, sizeof(addr)) < 0) {
         perror("sendto");
         return EXIT_FAILURE;
     }
