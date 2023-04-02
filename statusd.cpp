@@ -88,7 +88,7 @@ void
 refresh_status()
 {
     char buf[STATUS_BUF_MAX_SIZE] = {};
-    snprintf(&buf[0],
+    snprintf(buf,
              sizeof(buf),
              STATUS_FMT,
              field_buffers[0],
@@ -182,7 +182,7 @@ read_cmd_output(const char* cmd, char* buf)
         close(pipe_fds[1]);
 
         buf[0] = '\0'; /* Ignore previous contents */
-        auto nbytes = read_all(pipe_fds[0], &buf[0], FIELD_BUF_MAX_SIZE - 1);
+        auto nbytes = read_all(pipe_fds[0], buf, FIELD_BUF_MAX_SIZE - 1);
         if (nbytes < 0) {
             perror("read");
             return false;
