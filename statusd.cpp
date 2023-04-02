@@ -238,7 +238,7 @@ int
 main()
 {
     int sock_fd = get_named_socket();
-    if (sock_fd < 1)
+    if (sock_fd < 0)
         return EXIT_FAILURE;
 
 #ifndef NO_X11
