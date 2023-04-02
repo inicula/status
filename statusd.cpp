@@ -24,11 +24,6 @@ enum FieldIndex : u8 {
     N_FIELDS,
 };
 
-enum UpdateType : u8 {
-    UT_SHELL = 0, /* Update a field with a shell command's output */
-    UT_INTERNAL,  /* Update a field using a function */
-};
-
 /* Macros */
 #define SOCKET_PATH "\0/tmp/status.socket"
 #define STATUS_FMT "[%s |%s |%s]"
@@ -43,16 +38,6 @@ enum UpdateType : u8 {
         SHELL, "-c", cmd, nullptr                                                             \
     }
 
-/* Structs */
-struct Update {
-    UpdateType type;
-    FieldIndex buffer_idx;
-    union {
-        const char* sh_cmd;
-        void (*fptr)(char*);
-    };
-};
-
 /* Globals */
 static char field_buffers[N_FIELDS][FIELD_BUF_MAX_SIZE];
 #ifndef NO_X11
@@ -66,20 +51,19 @@ static void refresh_status();
 static int get_named_socket();
 static ssize_t read_all(int, char*, size_t);
 static bool read_cmd_output(const char*, char*);
-static void run_update(const Update*);
+static void update_time();
+static void update_load();
+static void update_temp();
 static void init_status();
 #ifndef NO_X11
 static bool init_x();
 #endif
 
-/* Updates' configuration */
-static constexpr Update updates[] = {
-    /* Update the time field */
-    {UT_SHELL, FI_TIME, {.sh_cmd = TIME_CMD}},
-    /* Update the load field */
-    {UT_SHELL, FI_LOAD, {.sh_cmd = LOAD_CMD}},
-    /* Update the cpu temp field */
-    {UT_SHELL, FI_TEMP, {.sh_cmd = TEMP_CMD}},
+/* Updates */
+static constexpr void (*updates[])() = {
+    &update_time,
+    &update_load,
+    &update_temp,
 };
 
 /* Function definitions  */
@@ -197,23 +181,28 @@ read_cmd_output(const char* cmd, char* buf)
 }
 
 void
-run_update(const Update* update)
+update_time()
 {
-    switch (update->type) {
-    case UT_SHELL:
-        read_cmd_output(update->sh_cmd, field_buffers[update->buffer_idx]);
-        break;
-    case UT_INTERNAL:
-        update->fptr(field_buffers[update->buffer_idx]);
-        break;
-    }
+    read_cmd_output(TIME_CMD, field_buffers[FI_TIME]);
+}
+
+void
+update_load()
+{
+    read_cmd_output(LOAD_CMD, field_buffers[FI_LOAD]);
+}
+
+void
+update_temp()
+{
+    read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP]);
 }
 
 void
 init_status()
 {
-    for (auto& el : updates)
-        run_update(&el);
+    for (auto& update : updates)
+        update();
     refresh_status();
 }
 
@@ -267,7 +256,7 @@ main()
 
         for (u8 i = 0; i < std::size(updates); i++) {
             if (bitset & (u64(1) << i))
-                run_update(&updates[i]);
+                updates[i]();
             bitset &= ~(u64(1) << i);
         }
 
