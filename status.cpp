@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstdint>
+#include <algorithm>
 #include <charconv>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -9,7 +10,7 @@
 using u8 = uint8_t;
 using u64 = uint64_t;
 
-#define SOCK_NAME "\0status-sock"
+#define SOCK_NAME "status-sock"
 
 int
 main(int argc, char* argv[])
@@ -41,12 +42,17 @@ main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
+    sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCK_NAME, sizeof(addr.sun_path) - 1);
+    socklen_t path_size = std::min(sizeof(addr.sun_path) - 2, strlen(SOCK_NAME));
+    memcpy(addr.sun_path + 1, SOCK_NAME, path_size);
 
-    if (sendto(server_fd, &bs, sizeof(bs), 0, (const sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (sendto(server_fd,
+               &bs,
+               sizeof(bs),
+               0,
+               (const sockaddr*)&addr,
+               sizeof(sa_family_t) + path_size + 1) < 0) {
         perror("sendto");
         return EXIT_FAILURE;
     }
