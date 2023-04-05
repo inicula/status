@@ -157,11 +157,11 @@ read_all(int fd, char* buf, size_t count)
 }
 
 bool
-read_cmd_output(const char* cmd, char* buf, size_t count)
+read_cmd_output(const char* cmd, char* buf, size_t size)
 {
     buf[0] = '\0'; /* Ignore previous contents */
 
-    if (count < 2)
+    if (size < 2)
         return false;
 
     int pipe_fds[2];
@@ -196,7 +196,7 @@ read_cmd_output(const char* cmd, char* buf, size_t count)
     } else {
         close(pipe_fds[1]);
 
-        auto nbytes = read_all(pipe_fds[0], buf, count - 1);
+        auto nbytes = read_all(pipe_fds[0], buf, size - 1);
         if (nbytes < 0) {
             perror("read");
             return false;
