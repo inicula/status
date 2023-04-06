@@ -1,0 +1,65 @@
+diff --git a/statusd.cpp b/statusd.cpp
+index 050c5aa..471ae8d 100644
+--- a/statusd.cpp
++++ b/statusd.cpp
+@@ -22,18 +22,20 @@ enum FieldIndex : u8 {
+     FI_TIME = 0,
+     FI_LOAD,
+     FI_TEMP,
++    FI_MEM,
+     N_FIELDS,
+ };
+ 
+ /* Macros */
+ #define SOCK_NAME "status-sock"
+-#define STATUS_FMT "[%s |%s |%s]"
++#define STATUS_FMT "[%s |%s |%s |%s]"
+ #define FIELD_BUF_MAX_SIZE (31 + 1)
+ #define STATUS_BUF_MAX_SIZE (FIELD_BUF_MAX_SIZE * N_FIELDS + sizeof(STATUS_FMT) + 1)
+ #define SHELL "/bin/sh"
+ #define TIME_CMD R"(date +%T)"
+ #define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
+ #define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | sed 's/+//')"
++#define MEM_CMD R"(free -h | awk '/^Mem:/ {print $3"/"$2}')"
+ #define SHCMD(cmd)                                                                            \
+     {                                                                                         \
+         SHELL, "-c", cmd, nullptr                                                             \
+@@ -55,6 +57,7 @@ static bool read_cmd_output(const char*, char*, size_t);
+ static void update_time();
+ static void update_load();
+ static void update_temp();
++static void update_mem();
+ static void init_status();
+ #ifndef NO_X11
+ static bool init_x();
+@@ -65,6 +68,7 @@ static constexpr void (*updates[])() = {
+     &update_time, /* 0 */
+     &update_load, /* 1 */
+     &update_temp, /* 2 */
++    &update_mem,  /* 3 */
+ };
+ 
+ /* Function definitions  */
+@@ -77,7 +81,8 @@ refresh_status()
+              STATUS_FMT,
+              field_buffers[0],
+              field_buffers[1],
+-             field_buffers[2]);
++             field_buffers[2],
++             field_buffers[3]);
+ 
+ #ifdef NO_X11
+     puts(buf);
+@@ -204,6 +209,12 @@ update_temp()
+     read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP], FIELD_BUF_MAX_SIZE);
+ }
+ 
++void
++update_mem()
++{
++    read_cmd_output(MEM_CMD, field_buffers[FI_MEM], FIELD_BUF_MAX_SIZE);
++}
++
+ void
+ init_status()
+ {
