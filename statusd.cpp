@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
+#include <sys/fcntl.h>
 #include "defer.h"
 #ifndef NO_X11
 #include <X11/Xlib.h>
@@ -30,9 +31,9 @@ enum FieldIndex : u8 {
 #define FIELD_BUF_MAX_SIZE (31 + 1)
 #define STATUS_BUF_MAX_SIZE (FIELD_BUF_MAX_SIZE * N_FIELDS + sizeof(STATUS_FMT) + 1)
 #define SHELL "/bin/sh"
-#define TIME_CMD R"(date +%H:%M:%S)"
-#define LOAD_CMD R"(uptime | grep -wo "average: .*," | cut --delimiter=' ' -f2 | head -c4)"
-#define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | cut -c2-5)"
+#define TIME_CMD R"(date +%T)"
+#define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
+#define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | sed 's/+//')"
 #define SHCMD(cmd)                                                                            \
     {                                                                                         \
         SHELL, "-c", cmd, nullptr                                                             \
@@ -50,7 +51,7 @@ static Window root;
 static void refresh_status();
 static int get_named_socket();
 static ssize_t read_all(int, char*, size_t);
-static bool read_cmd_output(const char*, char*);
+static bool read_cmd_output(const char*, char*, size_t);
 static void update_time();
 static void update_load();
 static void update_temp();
@@ -61,9 +62,9 @@ static bool init_x();
 
 /* Updates */
 static constexpr void (*updates[])() = {
-    &update_time,
-    &update_load,
-    &update_temp,
+    &update_time, /* 0 */
+    &update_load, /* 1 */
+    &update_temp, /* 2 */
 };
 
 /* Function definitions  */
@@ -131,8 +132,13 @@ read_all(int fd, char* buf, size_t count)
 }
 
 bool
-read_cmd_output(const char* cmd, char* buf)
+read_cmd_output(const char* cmd, char* buf, size_t size)
 {
+    buf[0] = '\0'; /* Ignore previous contents */
+
+    if (size < 2)
+        return false;
+
     int pipe_fds[2];
     if (pipe(pipe_fds) < 0) {
         perror("pipe");
@@ -165,8 +171,7 @@ read_cmd_output(const char* cmd, char* buf)
     } else {
         close(pipe_fds[1]);
 
-        buf[0] = '\0'; /* Ignore previous contents */
-        auto nbytes = read_all(pipe_fds[0], buf, FIELD_BUF_MAX_SIZE - 1);
+        auto nbytes = read_all(pipe_fds[0], buf, size - 1);
         if (nbytes < 0) {
             perror("read");
             return false;
@@ -184,19 +189,19 @@ read_cmd_output(const char* cmd, char* buf)
 void
 update_time()
 {
-    read_cmd_output(TIME_CMD, field_buffers[FI_TIME]);
+    read_cmd_output(TIME_CMD, field_buffers[FI_TIME], FIELD_BUF_MAX_SIZE);
 }
 
 void
 update_load()
 {
-    read_cmd_output(LOAD_CMD, field_buffers[FI_LOAD]);
+    read_cmd_output(LOAD_CMD, field_buffers[FI_LOAD], FIELD_BUF_MAX_SIZE);
 }
 
 void
 update_temp()
 {
-    read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP]);
+    read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP], FIELD_BUF_MAX_SIZE);
 }
 
 void
@@ -254,6 +259,10 @@ main()
             fprintf(stderr, "statusd: failed to read all bytes for bitset\n");
             continue;
         }
+
+#ifdef STATUS_DBG
+        fprintf(stderr, "statusd: Received bitset %lu\n", bitset);
+#endif
 
         for (u8 i = 0; i < std::size(updates); i++) {
             if (bitset & (u64(1) << i))
