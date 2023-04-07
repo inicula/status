@@ -41,6 +41,6 @@ $ ./status 2 # Update the CPU Temperature field
 $ ./status 0 1 2 # Update all three fields
 ```
 
-### Output sample (running with `dwm`)
+### Sample (running with `dwm`)
 
 ![](ss.png)
