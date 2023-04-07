@@ -18,12 +18,13 @@ $ sudo sh ./install.sh # optional
 
 ## Usage
 
-Run `statusd` in the background. Issue updates with the command `status <id-of-field>...`.
-
+Run `statusd` in the background. Issue updates with the command `status
+<id-of-field>...`.
 
 ### Adding fields
 
-See [`add_field.diff`](add_field.diff) (and optionally run `git apply add_field.diff`), which adds a system memory field having index 3.
+See [`add_field.diff`](add_field.diff) (and optionally run `git apply
+add_field.diff`), which adds a system memory field having index 3.
 
 ### Example
 
@@ -39,3 +40,7 @@ $ ./status 1 # Update the System Load field
 $ ./status 2 # Update the CPU Temperature field
 $ ./status 0 1 2 # Update all three fields
 ```
+
+### Output sample (running with `dwm`)
+
+![](ss.png)
