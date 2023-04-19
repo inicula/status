@@ -20,11 +20,11 @@ using u64 = uint64_t;
 /* Enums */
 enum FieldIndex : u8 {
     FI_TIME = 0,
-    FI_LOAD,
-    FI_TEMP,
     FI_VOL,
     FI_MIC,
+    FI_LOAD,
     FI_MEM,
+    FI_TEMP,
     FI_GOV,
     FI_DATE,
     N_FIELDS,
@@ -39,8 +39,8 @@ enum FieldIndex : u8 {
 #define TIME_CMD R"(date +%T)"
 #define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
 #define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | sed 's/+//')"
-#define VOL_CMD R"(pactl list sinks | awk '$1=="Volume:" {print $5}')"
-#define CHECK_MUTED_VOL R"(pactl list sinks | awk '$1=="Mute:" {print $2}')"
+#define VOL_CMD R"(amixer sget Master | tail -n1 | awk -F '\\[|\\]' '{print $2}')"
+#define CHECK_MUTED_VOL R"(amixer sget Master | tail -n1 | awk -F '\\[|\\]' '{print $4}')"
 #define MIC_CMD R"(amixer sget Capture | tail -n1 | awk -F '\\[|\\]' '{print $4}')"
 #define MEM_CMD R"(free -h | awk '/^Mem:/ {print $3"/"$2}')"
 #define DATE_CMD R"(date "+%a %d.%m.%Y")"
@@ -235,9 +235,11 @@ update_volume()
     if (!read_cmd_output(VOL_CMD, field_buffers[FI_VOL], FIELD_BUF_MAX_SIZE - 1))
         return;
 
-    char muted_buf[2] = {};
-    if (read_cmd_output(CHECK_MUTED_VOL, muted_buf, sizeof(muted_buf)) && muted_buf[0] == 'y')
+    char muted_buf[4] = {};
+    if (read_cmd_output(CHECK_MUTED_VOL, muted_buf, sizeof(muted_buf)) &&
+        strcmp(muted_buf, "off") == 0) {
         strcat(field_buffers[FI_VOL], "*");
+    }
 }
 
 void
