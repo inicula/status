@@ -200,6 +200,7 @@ read_cmd_output(const char *cmd, char *buf, size_t size)
         auto nbytes = read_all(pipe_fds[0], buf, size - 1);
         if (nbytes < 0) {
             perror("read");
+            buf[0] = '\0';
             return false;
         }
 
