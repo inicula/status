@@ -1,43 +1,31 @@
 ﻿---
-AlwaysBreakAfterDefinitionReturnType: 'true'
-AlignOperands: 'true'
-AllowAllConstructorInitializersOnNextLine: 'false'
-AllowAllArgumentsOnNextLine: 'false'
-AlwaysBreakTemplateDeclarations: 'Yes'
+Language: Cpp
+Standard: Auto
+
+AlwaysBreakAfterDefinitionReturnType: true
+AlignOperands: true
+AlignAfterOpenBracket: AlwaysBreak
+AllowAllConstructorInitializersOnNextLine: false
+PackConstructorInitializers: NextLine
+AllowAllArgumentsOnNextLine: false
+AlwaysBreakTemplateDeclarations: Yes
 BreakBeforeBraces: Linux
 BreakConstructorInitializers: BeforeComma
-ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
-Language: Cpp
-PointerAlignment: Left
-SpaceBeforeCpp11BracedList: 'false'
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+PointerAlignment: Right
+SpaceBeforeCpp11BracedList: false
 SpaceBeforeParens: ControlStatements
-Standard: Auto
-SortIncludes: 'false'
-AllowShortBlocksOnASingleLine: 'false'
-BinPackArguments: 'false'
-AllowShortCaseLabelsOnASingleLine: 'false'
-AllowShortFunctionsOnASingleLine: All
+SortIncludes: false
+AllowShortBlocksOnASingleLine: false
+BinPackArguments: false
+BinPackParameters: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
-AllowShortLambdasOnASingleLine: All
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
 SpaceAfterTemplateKeyword: 'false'
-IndentCaseLabels: 'false'
+IndentCaseLabels: false
 ColumnLimit: 95
-IndentWidth : '4'
-AccessModifierOffset: '-4'
-BraceWrapping:
-    AfterCaseLabel: 'true'
-    AfterClass: 'true'
-    AfterControlStatement: 'true'
-    AfterFunction: 'true'
-    AfterNamespace: 'true'
-    AfterObjCDeclaration: 'true'
-    AfterStruct: 'true'
-    AfterUnion: 'true'
-    AfterExternBlock: 'true'
-    BeforeCatch: 'true'
-    BeforeElse: 'true'
-    BeforeLambdaBody: 'true'
-    SplitEmptyFunction: 'true'
-    SplitEmptyRecord: 'true'
-    SplitEmptyNamespace: 'true'
-
+IndentWidth : 4
+AccessModifierOffset: -4

@@ -52,7 +52,7 @@ enum FieldIndex : u8 {
 /* Globals */
 static char field_buffers[N_FIELDS][FIELD_BUF_MAX_SIZE];
 #ifndef NO_X11
-static Display* display;
+static Display *display;
 static int screen;
 static Window root;
 #endif
@@ -60,8 +60,8 @@ static Window root;
 /* Function declarations */
 static void refresh_status();
 static int get_named_socket();
-static ssize_t read_all(int, char*, size_t);
-static bool read_cmd_output(const char*, char*, size_t);
+static ssize_t read_all(int, char *, size_t);
+static bool read_cmd_output(const char *, char *, size_t);
 static void update_time();
 static void update_load();
 static void update_temp();
@@ -92,17 +92,18 @@ void
 refresh_status()
 {
     char buf[STATUS_BUF_MAX_SIZE] = {};
-    snprintf(buf,
-             sizeof(buf),
-             STATUS_FMT,
-             field_buffers[0],
-             field_buffers[1],
-             field_buffers[2],
-             field_buffers[3],
-             field_buffers[4],
-             field_buffers[5],
-             field_buffers[6],
-             field_buffers[7]);
+    snprintf(
+        buf,
+        sizeof(buf),
+        STATUS_FMT,
+        field_buffers[0],
+        field_buffers[1],
+        field_buffers[2],
+        field_buffers[3],
+        field_buffers[4],
+        field_buffers[5],
+        field_buffers[6],
+        field_buffers[7]);
 
 #ifdef NO_X11
     puts(buf);
@@ -126,7 +127,7 @@ get_named_socket()
     socklen_t path_size = std::min(sizeof(name.sun_path) - 2, strlen(SOCK_NAME));
     memcpy(name.sun_path + 1, SOCK_NAME, path_size);
 
-    if (bind(sock_fd, (const sockaddr*)&name, sizeof(sa_family_t) + path_size + 1) < 0) {
+    if (bind(sock_fd, (const sockaddr *)&name, sizeof(sa_family_t) + path_size + 1) < 0) {
         perror("bind");
         return -1;
     }
@@ -135,7 +136,7 @@ get_named_socket()
 }
 
 ssize_t
-read_all(int fd, char* buf, size_t count)
+read_all(int fd, char *buf, size_t count)
 {
     size_t read_so_far = 0;
     while (read_so_far < count) {
@@ -157,7 +158,7 @@ read_all(int fd, char* buf, size_t count)
 }
 
 bool
-read_cmd_output(const char* cmd, char* buf, size_t size)
+read_cmd_output(const char *cmd, char *buf, size_t size)
 {
     buf[0] = '\0'; /* Ignore previous contents */
 
@@ -188,8 +189,8 @@ read_cmd_output(const char* cmd, char* buf, size_t size)
         }
         close(pipe_fds[1]);
 
-        const char* child_argv[] = SHCMD(cmd);
-        execv(child_argv[0], (char**)child_argv);
+        const char *child_argv[] = SHCMD(cmd);
+        execv(child_argv[0], (char **)child_argv);
 
         perror("execv");
         exit(EXIT_FAILURE);
@@ -285,7 +286,7 @@ update_gov()
     if (nbytes > 0 && gov_buf[nbytes - 1] == '\n')
         gov_buf[--nbytes] = '\0';
 
-    char* field_buf = field_buffers[FI_GOV];
+    char *field_buf = field_buffers[FI_GOV];
     if (strcmp(gov_buf, "performance") == 0)
         strcpy(field_buf, "p");
     else if (strcmp(gov_buf, "ondemand") == 0)
@@ -305,7 +306,7 @@ update_date()
 void
 init_status()
 {
-    for (auto& update : updates)
+    for (auto &update : updates)
         update();
     refresh_status();
 }
