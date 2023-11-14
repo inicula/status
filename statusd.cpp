@@ -21,7 +21,6 @@ using u64 = uint64_t;
 enum FieldIndex : u8 {
     FI_TIME = 0,
     FI_VOL,
-    FI_MIC,
     FI_LOAD,
     FI_MEM,
     FI_TEMP,
@@ -32,16 +31,15 @@ enum FieldIndex : u8 {
 
 /* Macros */
 #define SOCK_NAME "status-sock"
-#define STATUS_FMT "[%s |%s |%s |%s |%s |%s |%s |%s]"
+#define STATUS_FMT "[%s |%s |%s |%s |%s |%s |%s]"
 #define FIELD_BUF_MAX_SIZE (31 + 1)
 #define STATUS_BUF_MAX_SIZE (FIELD_BUF_MAX_SIZE * N_FIELDS + sizeof(STATUS_FMT) + 1)
 #define SHELL "/bin/sh"
 #define TIME_CMD R"(date +%T)"
 #define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
 #define TEMP_CMD R"(sensors | grep -F "Core 0" | awk '{print $3}' | sed 's/+//')"
-#define VOL_CMD R"(amixer sget Master | tail -n1 | awk -F '\\[|\\]' '{print $2}')"
-#define CHECK_MUTED_VOL R"(amixer sget Master | tail -n1 | awk -F '\\[|\\]' '{print $4}')"
-#define MIC_CMD R"(amixer sget Capture | tail -n1 | awk -F '\\[|\\]' '{print $4}')"
+#define VOL_CMD R"(pactl get-sink-volume @DEFAULT_SINK@ | head -n1 | tr -d ' ' | awk -F'/' '{print $2}')"
+#define CHECK_MUTED_VOL R"(pactl get-sink-mute @DEFAULT_SINK@)"
 #define MEM_CMD R"(free -h | awk '/^Mem:/ {print $3"/"$2}')"
 #define DATE_CMD R"(date "+%a %d.%m.%Y")"
 #define SHCMD(cmd)                                                                            \
@@ -66,10 +64,10 @@ static void update_time();
 static void update_load();
 static void update_temp();
 static void update_volume();
-static void update_mic();
 static void update_mem();
 static void update_gov();
 static void update_date();
+static void update_none();
 static void init_status();
 #ifndef NO_X11
 static bool init_x();
@@ -81,7 +79,7 @@ static constexpr void (*updates[])() = {
     &update_load,   /* 1 */
     &update_temp,   /* 2 */
     &update_volume, /* 3 */
-    &update_mic,    /* 4 */
+    &update_none,   /* 4 */
     &update_mem,    /* 5 */
     &update_gov,    /* 6 */
     &update_date,   /* 7 */
@@ -102,8 +100,7 @@ refresh_status()
         field_buffers[3],
         field_buffers[4],
         field_buffers[5],
-        field_buffers[6],
-        field_buffers[7]);
+        field_buffers[6]);
 
 #ifdef NO_X11
     puts(buf);
@@ -237,17 +234,11 @@ update_volume()
     if (!read_cmd_output(VOL_CMD, field_buffers[FI_VOL], FIELD_BUF_MAX_SIZE - 1))
         return;
 
-    char muted_buf[4] = {};
+    char muted_buf[10] = {};
     if (read_cmd_output(CHECK_MUTED_VOL, muted_buf, sizeof(muted_buf)) &&
-        strcmp(muted_buf, "off") == 0) {
+        strcmp(muted_buf, "Mute: yes") == 0) {
         strcat(field_buffers[FI_VOL], "*");
     }
-}
-
-void
-update_mic()
-{
-    read_cmd_output(MIC_CMD, field_buffers[FI_MIC], FIELD_BUF_MAX_SIZE);
 }
 
 void
@@ -302,6 +293,11 @@ void
 update_date()
 {
     read_cmd_output(DATE_CMD, field_buffers[FI_DATE], FIELD_BUF_MAX_SIZE);
+}
+
+void
+update_none()
+{
 }
 
 void
