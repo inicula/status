@@ -26,18 +26,20 @@ enum FieldIndex : u8 {
     FI_TEMP,
     FI_GOV,
     FI_DATE,
+    FI_BAT,
     N_FIELDS,
 };
 
 /* Macros */
 #define SOCK_NAME "status-sock"
-#define STATUS_FMT "[%s |%s |%s |%s |%s |%s |%s]"
+#define STATUS_FMT "[%s |%s |%s |%s |%s |%s |%s %s]"
 #define FIELD_BUF_MAX_SIZE (31 + 1)
 #define STATUS_BUF_MAX_SIZE (FIELD_BUF_MAX_SIZE * N_FIELDS + sizeof(STATUS_FMT) + 1)
 #define SHELL "/bin/sh"
 #define TIME_CMD R"(date +%T)"
 #define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
 #define TEMP_CMD R"(sensors | rg -F cpu | tail -n1 | awk '{print $2}')"
+#define BAT_CMD R"(cat /sys/class/power_supply/BAT1/capacity)"
 #define VOL_CMD R"(pactl get-sink-volume @DEFAULT_SINK@ | head -n1 | tr -d ' ' | awk -F'/' '{print $2}')"
 #define CHECK_MUTED_VOL R"(pactl get-sink-mute @DEFAULT_SINK@)"
 #define MEM_CMD R"(free -h | awk '/^Mem:/ {print $3"/"$2}')"
@@ -67,6 +69,7 @@ static void update_volume();
 static void update_mem();
 static void update_gov();
 static void update_date();
+static void update_bat();
 static void update_none();
 static void init_status();
 #ifndef NO_X11
@@ -83,6 +86,7 @@ static constexpr void (*updates[])() = {
     &update_mem,    /* 5 */
     &update_gov,    /* 6 */
     &update_date,   /* 7 */
+    &update_bat,    /* 8 */
 };
 
 /* Function definitions  */
@@ -100,7 +104,8 @@ refresh_status()
         field_buffers[3],
         field_buffers[4],
         field_buffers[5],
-        field_buffers[6]);
+        field_buffers[6],
+        field_buffers[7]);
 
 #ifdef NO_X11
     puts(buf);
@@ -226,6 +231,12 @@ void
 update_temp()
 {
     read_cmd_output(TEMP_CMD, field_buffers[FI_TEMP], FIELD_BUF_MAX_SIZE);
+}
+
+void
+update_bat()
+{
+    read_cmd_output(BAT_CMD, field_buffers[FI_BAT], FIELD_BUF_MAX_SIZE);
 }
 
 void
