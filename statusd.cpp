@@ -38,7 +38,7 @@ enum FieldIndex : u8 {
 #define SHELL "/bin/sh"
 #define TIME_CMD R"(date +%T)"
 #define LOAD_CMD R"(uptime | awk '{print $(NF-2)}' | sed 's/,//g')"
-#define TEMP_CMD R"(sensors | rg -F cpu | tail -n1 | awk '{print $2}')"
+#define TEMP_CMD R"(sensors | grep -F cpu | tail -n1 | awk '{print $2}')"
 #define BAT_CMD R"(cat /sys/class/power_supply/BAT1/capacity)"
 #define VOL_CMD R"(pactl get-sink-volume @DEFAULT_SINK@ | head -n1 | tr -d ' ' | awk -F'/' '{print $2}')"
 #define CHECK_MUTED_VOL R"(pactl get-sink-mute @DEFAULT_SINK@)"
